@@ -1,11 +1,20 @@
+#--------------------------------------------------------------------------------------------------
+#Libraries
+
+#GUI Libraries
 import tkinter as tk
 from tkinter import simpledialog, messagebox
+
+#Other Libraries...
+
+
+#--------------------------------------------------------------------------------------------------
 
 class ReviewPortalGUI:
     def __init__(self, master):
         self.master = master
         self.master.title("Review Portal")
-        self.master.configure(bg="white")  # Arkaplan rengini beyaz yapar.
+        self.master.configure(bg="white")
 
         self.welcome_label = tk.Label(master, text="Welcome to Review Portal!\n", bg="white", fg="black")
         self.welcome_label.pack()
@@ -13,7 +22,7 @@ class ReviewPortalGUI:
         self.user_id_label = tk.Label(master, text="Please enter your user id:", bg="white", fg="black")
         self.user_id_label.pack()
 
-        self.user_id_entry = tk.Entry(master, bg="white", fg="black", bd=1, relief="solid")  # bd: border width, relief: border style
+        self.user_id_entry = tk.Entry(master, bg="white", fg="black", bd=1, relief="solid")
         self.user_id_entry.pack()
 
         self.options_label = tk.Label(master, text="\nPlease pick the option that you want to proceed.", bg="white", fg="black")
@@ -47,26 +56,49 @@ class ReviewPortalGUI:
             selected_option = int(selected_option)
 
             if 1 <= selected_option <= 6:
-                if selected_option == 4:
+                if selected_option == 1:
+                    self.create_collection()
+                elif selected_option == 2:
+                    self.read_all_data()
+                elif selected_option == 3:
+                    self.read_filtered_data()
+                elif selected_option == 4:
                     self.insert_data()
-                else:
-                    messagebox.showinfo("Selected Option", f"You selected option {selected_option}")
+                elif selected_option == 5:
+                    self.delete_data()
+                elif selected_option == 6:
+                    self.update_data()
             else:
                 messagebox.showwarning("Invalid Option", "Please enter a valid option (1-6).")
         else:
             messagebox.showwarning("Invalid Input", "Please enter a numeric option.")
 
+#----------------------------------------------
+    def create_collection(self):
+        messagebox.showinfo("Create Collection", "You selected option 1. Performing 'Create a collection' operation.")
+
+#----------------------------------------------
+    def read_all_data(self):
+        messagebox.showinfo("Read All Data", "You selected option 2. Performing 'Read all data in a collection' operation.")
+
+#----------------------------------------------
+    def read_filtered_data(self):
+        messagebox.showinfo("Read Filtered Data", "You selected option 3. Performing 'Read some part of the data while filtering' operation.")
+
+#----------------------------------------------
     def insert_data(self):
-        collection = simpledialog.askstring("Insert Data", "Please select the collection you want to insert data:",
-                                            parent=self.master)
+        messagebox.showinfo("Insert Data", "You selected option 4. Performing 'Insert data' operation.")
 
-        if collection:
-            self.insert_data_action(collection)
-        else:
-            messagebox.showwarning("Incomplete Data", "Please provide the collection.")
+#----------------------------------------------
+    def delete_data(self):
+        messagebox.showinfo("Delete Data", "You selected option 5. Performing 'Delete data' operation.")
 
-    def insert_data_action(self, collection):
-        messagebox.showinfo("Insert Data", f"You selected option 4. Please select the collection: {collection}")
+#----------------------------------------------
+    def update_data(self):
+        messagebox.showinfo("Update Data", "You selected option 6. Performing 'Update data' operation.")
+#----------------------------------------------
+        
+#--------------------------------------------------------------------------------------------------
 
 if __name__ == "__main__":
     root = tk.Tk()
