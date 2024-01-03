@@ -8,6 +8,16 @@ from tkinter import simpledialog, messagebox
 #Other Libraries...
 from pymongo import MongoClient  # pymongo kütüphanesini ekledik
 
+username = "erselekmen"
+password = "VV4J5jV9&q*3XrY"
+DATABASE_URL = "mongodb+srv://" + username + ":" + password + "@cluster0.eh8uyv7.mongodb.net/?retryWrites=true&w=majority"
+
+
+
+mongodb_client = MongoClient(DATABASE_URL)
+mongodb = mongodb_client['cs306']
+collections = mongodb['first_collection']
+
 
 #--------------------------------------------------------------------------------------------------
 
@@ -78,6 +88,8 @@ class ReviewPortalGUI:
     # 1- Create a collection.
     def create_collection(self):
         messagebox.showinfo("Create Collection", "You selected option 1. Performing 'Create a collection' operation.")
+        collection_name = 'collection'
+        mongodb.create_collection(collection_name)
 
 #----------------------------------------------
     # 2- Read all data in a collection.
