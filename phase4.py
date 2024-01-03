@@ -6,6 +6,7 @@ import tkinter as tk
 from tkinter import simpledialog, messagebox
 
 #Other Libraries...
+from pymongo import MongoClient  # pymongo kütüphanesini ekledik
 
 
 #--------------------------------------------------------------------------------------------------
@@ -74,26 +75,61 @@ class ReviewPortalGUI:
             messagebox.showwarning("Invalid Input", "Please enter a numeric option.")
 
 #----------------------------------------------
+    # 1- Create a collection.
     def create_collection(self):
         messagebox.showinfo("Create Collection", "You selected option 1. Performing 'Create a collection' operation.")
 
 #----------------------------------------------
+    # 2- Read all data in a collection.
+    
+    '''
     def read_all_data(self):
-        messagebox.showinfo("Read All Data", "You selected option 2. Performing 'Read all data in a collection' operation.")
+        # 2. seçeneğe özel MongoDB okuma işlemleri
+        client = MongoClient("mongodb://localhost:27017/")  # MongoDB bağlantısı
+        db = client["review_portal"]  # Veritabanı seçimi (var olan bir veritabanı adını kullanın veya yeni bir tane oluşturun)
+        collection = db["reviews"]  # Koleksiyon seçimi (var olan bir koleksiyon adını kullanın veya yeni bir tane oluşturun)
+
+        # Tüm verileri okuma
+        data = collection.find()
+        result = ""
+        for record in data:
+            result += f"Name: {record['name']}, Review: {record['review_message']}, Rating: {record['given_star']}\n"
+        
+        messagebox.showinfo("Read All Data", result)
+    '''
 
 #----------------------------------------------
+    # 3- Read some part of the data while filtering.
+
+    '''
     def read_filtered_data(self):
-        messagebox.showinfo("Read Filtered Data", "You selected option 3. Performing 'Read some part of the data while filtering' operation.")
+        # 3. seçeneğe özel MongoDB filtreli okuma işlemleri
+        client = MongoClient("mongodb://localhost:27017/")  # MongoDB bağlantısı
+        db = client["review_portal"]  # Veritabanı seçimi (var olan bir veritabanı adını kullanın veya yeni bir tane oluşturun)
+        collection = db["reviews"]  # Koleksiyon seçimi (var olan bir koleksiyon adını kullanın veya yeni bir tane oluşturun)
+
+        # Kullanıcıdan filtre terimi al
+        filter_term = simpledialog.askstring("Filter Data", "Enter filter term:")
+        
+        # Filtrelenmiş verileri okuma
+        data = collection.find({"name": {"$regex": filter_term, "$options": "i"}})  # Case-insensitive regex kullanarak filtreleme
+        result = ""
+        for record in data:
+            result += f"Name: {record['name']}, Review: {record['review_message']}, Rating: {record['given_star']}\n"
+    '''
 
 #----------------------------------------------
+    # 4- Insert data.
     def insert_data(self):
         messagebox.showinfo("Insert Data", "You selected option 4. Performing 'Insert data' operation.")
 
 #----------------------------------------------
+    # 5- Delete data.
     def delete_data(self):
         messagebox.showinfo("Delete Data", "You selected option 5. Performing 'Delete data' operation.")
 
 #----------------------------------------------
+    # 6- Update data.
     def update_data(self):
         messagebox.showinfo("Update Data", "You selected option 6. Performing 'Update data' operation.")
 #----------------------------------------------
