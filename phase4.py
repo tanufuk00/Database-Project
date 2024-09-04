@@ -4,12 +4,18 @@
 # GUI Libraries
 import tkinter as tk
 from tkinter import simpledialog, messagebox
+from tkinter import scrolledtext
 
 # Other Libraries...
 from pymongo import MongoClient  # pymongo kütüphanesini ekledik
+username = "erselekmen"
+password = "VV4J5jV9&q*3XrY"
+MONGO_INITDB_DATABASE = "cs306"
+DATABASE_URL = "mongodb+srv://" + username + ":" + password + "@cluster0.eh8uyv7.mongodb.net/?retryWrites=true&w=majority"
 
-client = MongoClient("mongodb+srv://selenaybuse09:01032002@cluster0.mjnpjnq.mongodb.net/test")
-db = client["306"]
+
+client = MongoClient(DATABASE_URL)
+db = client["database"]
 
 collection_names = db.list_collection_names()
 collections = {collection_name: list(db[collection_name].find()) for collection_name in collection_names}
@@ -18,22 +24,22 @@ collections = {collection_name: list(db[collection_name].find()) for collection_
 
 
 class ReviewPortalGUI:
+
     def __init__(self, master):
         self.master = master
         self.master.title("Review Portal")
         self.master.configure(bg="white")
 
-        self.welcome_label = tk.Label(master, text="Welcome to Review Portal!\n", bg="white", fg="black")
-        self.welcome_label.pack()
-
-        self.user_id_label = tk.Label(master, text="Please enter your user id:", bg="white", fg="black")
+        self.user_id_label = tk.Label(master, text="Please write your user id, then you must click enter button in your keyboard.", bg="white", fg="black")
         self.user_id_label.pack()
 
         self.user_id_entry = tk.Entry(master, bg="white", fg="black", bd=1, relief="solid")
         self.user_id_entry.pack()
+        self.user_id_entry.bind("<Return>", self.set_user_id)  # Enter tuşuna basıldığında user_id'yi ayarla
 
-        self.options_label = tk.Label(master, text="\nPlease pick the option that you want to proceed.", bg="white",
-                                      fg="black")
+        self.user_id = None  # Başlangıçta user_id boş
+
+        self.options_label = tk.Label(master, text="\nPlease pick the option that you want to proceed.", bg="white", fg="black")
         self.options_label.pack()
 
         options = [
@@ -54,9 +60,14 @@ class ReviewPortalGUI:
         self.selected_option_entry = tk.Entry(master, bg="white", fg="black", bd=1, relief="solid")
         self.selected_option_entry.pack()
 
-        self.selected_option_button = tk.Button(master, text="Select Option", command=self.select_option, bg="white",
-                                                fg="black")
+        self.selected_option_button = tk.Button(master, text="Select Option", command=self.select_option, bg="white", fg="black")
         self.selected_option_button.pack()
+
+
+
+    def set_user_id(self, event=None):
+        self.user_id = self.user_id_entry.get()
+
 
     def select_option(self):
         selected_option = self.selected_option_entry.get()
@@ -86,183 +97,196 @@ class ReviewPortalGUI:
     # 1- Create a collection.
 
     def create_collection(self, mongodb=None):
-        new_collection_name = input("Please enter the collection name you want to use: ")
+            if not self.user_id:
+                messagebox.showwarning("No User ID", "Please write a user ID first.")
+                return
 
-        if new_collection_name in collection_names:
-            print("Name already exists.")
+            new_collection_name = simpledialog.askstring("New Collection", "Please enter the collection name you want to use:")
 
-        else:
+            if new_collection_name in collection_names:
+                messagebox.showwarning("Warning", "Name already exists.")
+                return
 
             attributes = []
-            response = input("Please enter the attributes in the collection (Enter 0 to exit): ")
-            attributes.append(response)
-            while response != "0":
-                response = input("Please enter the attributes in the collection (Enter 0 to exit): ")
-                if response != "0":
+            while True:
+                response = simpledialog.askstring("Attributes", "Please enter the attributes in the collection (Enter 0 to exit):")
+                if response == "0":
+                    break
+                if response:  # Make sure it's not an empty string
                     attributes.append(response)
 
-            # print(attributes)
-            default_data = {attr: "null" for attr in attributes}
-            data ={}
+            if not attributes:
+                messagebox.showwarning("Warning", "No attributes provided.")
+                return
 
+            data = {'user_id': self.user_id}  # Kullanıcının ID'sini data sözlüğüne ekleyin
             for attr in attributes:
-                value = input(f"Enter the value for '{attr}': ")
-                data[attr] = value
+                value = simpledialog.askstring("Attribute Value", f"Enter the value for '{attr}':")
+                data[attr] = value if value is not None else "null"
 
             db[new_collection_name].insert_one(data)
-            messagebox.showinfo("Collection Created",
-                                f"The collection '{new_collection_name}' was successfully created.")
+            messagebox.showinfo("Collection Created", f"The collection '{new_collection_name}' was successfully created.")
 
     # ----------------------------------------------
     # 2- Read all data in a collection.
 
-    def read_all_data(self):    # 2. seçeneğe özel MongoDB okuma işlemleri
+    def read_all_data(self):
+        # Display available collections and let user select one
+        collection_list = "\n".join([f"{idx} - {name}" for idx, name in enumerate(collections.keys(), start=1)])
+        messagebox.showinfo("Available Collections", f"Please select a collection to read data from:\n{collection_list}")
+        collection_number = simpledialog.askinteger("Collection Selection", "Enter the collection number:")
 
-        # Display available collections
-        for idx, collection_name in enumerate(collections.keys(), start=1):
-            print(f"{idx} - {collection_name}")
+        if collection_number is None or collection_number < 1 or collection_number > len(collections):
+            messagebox.showwarning("Invalid Selection", "Invalid collection number.")
+            return
 
-        collection_number = input("Please select the collection you want to read: ")
-        collection_index = int(collection_number)
+        selected_collection_name = list(collections.keys())[collection_number - 1]
+        cursor = db[selected_collection_name].find()
 
-        if 1 <= collection_index <= len(collection_names):
-
-            selected_collection_name = list(collections.keys())[collection_index - 1]
-            print("Selected option: ", str(collection_number))
-
-            cursor = db[selected_collection_name].find()
-
-            for data in cursor:
-                print(data)
-
-        else:
-            messagebox.showwarning("Index Error!","Invalid Collection Number")
+        # Display data in a scrolled text widget
+        display_window = tk.Toplevel(self.master)
+        display_window.title(f"Data from {selected_collection_name}")
+        text_area = scrolledtext.ScrolledText(display_window, wrap=tk.WORD, width=80, height=20)
+        text_area.pack(padx=10, pady=10)
+        text_area.insert(tk.INSERT, "\n".join([str(data) for data in cursor]))
+        text_area.config(state=tk.DISABLED)
 
     # ----------------------------------------------
     # 3- Read some part of the data while filtering.
 
     def read_filtered_data(self):
+        # Display available collections and let user select one
+        collection_list = "\n".join([f"{idx} - {name}" for idx, name in enumerate(collections.keys(), start=1)])
+        messagebox.showinfo("Available Collections", f"Please select a collection to read filtered data from:\n{collection_list}")
+        collection_number = simpledialog.askinteger("Collection Selection", "Enter the collection number:")
 
+        if collection_number is None or collection_number < 1 or collection_number > len(collections):
+            messagebox.showwarning("Invalid Selection", "Invalid collection number.")
+            return
+
+        selected_collection_name = list(collections.keys())[collection_number - 1]
+
+        # Get filter criteria from the user
         filter_criteria = {}
-        # Display available collections
-        for idx, collection_name in enumerate(collections.keys(), start=1):
-            print(f"{idx} - {collection_name}")
-
-        collection_number = input("Please select the collection you want to read: ")
-        collection_index = int(collection_number)
-
-        if 1 <= collection_index <= len(collection_names):
-
-            selected_collection_name = list(collections.keys())[collection_index - 1]
-            print("Selected option: ", str(collection_number))
-
-            while True:
-                field_name = input("Enter the criteria you want to filter (or press Enter to finish): ")
-                if not field_name:
-                    break
-                field_value = input("Enter field value: ")
+        while True:
+            field_name = simpledialog.askstring("Filter Criteria", "Enter the criteria you want to filter (or leave blank to finish):")
+            if not field_name:
+                break
+            field_value = simpledialog.askstring("Filter Value", f"Enter value for '{field_name}':")
+            if field_value is not None:
                 filter_criteria[field_name] = field_value
 
-            cursor = db[selected_collection_name].find(filter_criteria)
+        # Execute query with filter
+        cursor = db[selected_collection_name].find(filter_criteria)
 
-            for data in cursor:
-                print(data)
+        # Display data in a scrolled text widget
+        display_window = tk.Toplevel(self.master)
+        display_window.title(f"Filtered Data from {selected_collection_name}")
+        text_area = scrolledtext.ScrolledText(display_window, wrap=tk.WORD, width=80, height=20)
+        text_area.pack(padx=10, pady=10)
+        text_area.insert(tk.INSERT, "\n".join([str(data) for data in cursor]))
+        text_area.config(state=tk.DISABLED)
 
-        else:
-            messagebox.showwarning("Index Error!","Invalid Collection Number")
     # ----------------------------------------------
     # 4- Insert data.
     def insert_data(self):
-        # Display available collections
-        for idx, collection_name in enumerate(collections.keys(), start=1):
-            print(f"{idx} - {collection_name}")
+        messagebox.showinfo("Insert Data", "You selected option 4. Performing 'Insert data' operation.")
+        
+        # Display available collections and let user select one
+        collection_list = "\n".join([f"{idx} - {name}" for idx, name in enumerate(collections.keys(), start=1)])
+        messagebox.showinfo("Available Collections", f"Please select a collection to insert data:\n{collection_list}")
+        collection_number = simpledialog.askinteger("Collection Selection", "Enter the collection number:")
 
-        collection_number = input("Please select the collection you want to insert data: ")
-        print("Selected option: ", str(collection_number))
+        if collection_number is None or collection_number < 1 or collection_number > len(collections):
+            messagebox.showwarning("Invalid Selection", "Invalid collection number.")
+            return
 
-        print("Please enter the data fields: ")
-        selected_collection_name = list(collections.keys())[int(collection_number) - 1]
+        selected_collection_name = list(collections.keys())[collection_number - 1]
         field_names = list(collections[selected_collection_name][0].keys())
-        # print(field_names)
 
         data = {}
-
         for field_name in field_names:
-            if field_name != "_id":
-                field_value = input(f"{field_name}: ")
-                data[field_name] = field_value
+            if field_name != "_id":  # Exclude the '_id' field
+                field_value = simpledialog.askstring("Data Entry", f"Enter value for '{field_name}':")
+                if field_value is not None:
+                    data[field_name] = field_value
 
-        # Insert data into MongoDB
-        db[selected_collection_name].insert_one(data)
-        messagebox.showinfo("Data inserted", "Data was successfully inserted!")
+        if data:
+            db[selected_collection_name].insert_one(data)
+            messagebox.showinfo("Data Inserted", "Data was successfully inserted into the collection.")
+        else:
+            messagebox.showwarning("No Data", "No data was entered.")
     # ----------------------------------------------
     # 5- Delete data.
 
     def delete_data(self):
-        # Display available collections
-        for idx, collection_name in enumerate(collections.keys(), start=1):
-            print(f"{idx} - {collection_name}")
+        messagebox.showinfo("Delete Data", "You selected option 5. Performing 'Delete data' operation.")
+        
+        # Display available collections and let user select one
+        collection_list = "\n".join([f"{idx} - {name}" for idx, name in enumerate(collections.keys(), start=1)])
+        messagebox.showinfo("Available Collections", f"Please select a collection to delete data from:\n{collection_list}")
+        collection_number = simpledialog.askinteger("Collection Selection", "Enter the collection number:")
 
-        collection_number = input("Please select the collection you want to delete the data from: ")
-        print("Selected option: ", str(collection_number))
+        if collection_number is None or collection_number < 1 or collection_number > len(collections):
+            messagebox.showwarning("Invalid Selection", "Invalid collection number.")
+            return
 
-        print("Please enter the data fields: ")  # modify
-        selected_collection_name = list(collections.keys())[int(collection_number) - 1]
+        selected_collection_name = list(collections.keys())[collection_number - 1]
         field_names = list(collections[selected_collection_name][0].keys())
-        # print(field_names)
 
         data = {}
-
         for field_name in field_names:
-            if field_name != "_id":
-                field_value = input(f"{field_name}: ")
-                data[field_name] = field_value
+            if field_name != "_id":  # Exclude the '_id' field
+                field_value = simpledialog.askstring("Data Entry", f"Enter value for '{field_name}' to delete:")
+                if field_value is not None:
+                    data[field_name] = field_value
 
         # Check if data exists in the selected collection
-        if db[selected_collection_name].count_documents(data) > 0:
+        if data and db[selected_collection_name].count_documents(data) > 0:
             # Delete data from MongoDB
             db[selected_collection_name].delete_one(data)
-            messagebox.showinfo("Data deleted", "Data was successfully deleted!")
+            messagebox.showinfo("Data Deleted", "Data was successfully deleted from the collection.")
         else:
-            messagebox.showwarning("Invalid data", "No such data found in the collection.")
+            messagebox.showwarning("No Data Found", "No matching data found in the collection.")
 
     # ----------------------------------------------
     # 6- Update data.
     def update_data(self):
-        # Display available collections
-        for idx, collection_name in enumerate(collections.keys(), start=1):
-            print(f"{idx} - {collection_name}")
+        # Display available collections and let user select one
+        collection_list = "\n".join([f"{idx} - {name}" for idx, name in enumerate(collections.keys(), start=1)])
+        messagebox.showinfo("Available Collections", f"Please select a collection to update data:\n{collection_list}")
+        collection_number = simpledialog.askinteger("Collection Selection", "Enter the collection number:")
 
-        collection_number = input("Enter the collection you want to update: ")
-        print("Selected option: ", collection_number)
-        print("Please enter the original data fields you want to update: ")
+        if collection_number is None or collection_number < 1 or collection_number > len(collections):
+            messagebox.showwarning("Invalid Selection", "Invalid collection number.")
+            return
 
-        selected_collection_name = list(collections.keys())[int(collection_number) - 1]
+        selected_collection_name = list(collections.keys())[collection_number - 1]
         field_names = list(collections[selected_collection_name][0].keys())
-        # print(field_names)
 
+        # Get original data from the user
         original_data = {}
-
         for field_name in field_names:
-            if field_name != "_id":
-                field_value = input(f"{field_name}: ")
-                original_data[field_name] = field_value
+            if field_name != "_id":  # Exclude the '_id' field
+                field_value = simpledialog.askstring("Original Data Entry", f"Enter original value for '{field_name}':")
+                if field_value is not None:
+                    original_data[field_name] = field_value
 
+        # Check if the original data exists
         if db[selected_collection_name].find_one(original_data):
-            print("Please enter the new data fields: ")
-
+            # Get new data from the user
             new_data = {}
-
             for field_name in field_names:
                 if field_name != "_id":
-                    field_value = input(f"{field_name}: ")
-                    new_data[field_name] = field_value
+                    field_value = simpledialog.askstring("New Data Entry", f"Enter new value for '{field_name}':")
+                    if field_value is not None:
+                        new_data[field_name] = field_value
 
+            # Update data in MongoDB
             db[selected_collection_name].update_one(original_data, {"$set": new_data})
-            messagebox.showinfo("Data updated", "Data was successfully updated!")
-
+            messagebox.showinfo("Data Updated", "Data was successfully updated in the collection.")
         else:
-            messagebox.showwarning("Update error", "No such data was found!")
+            messagebox.showwarning("No Data Found", "No matching data found in the collection.")
 
 
 # ----------------------------------------------
